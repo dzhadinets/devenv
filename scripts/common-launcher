@@ -1,0 +1,215 @@
+#!/bin/bash
+#
+# Common wrapper to run commands in the docker container
+#
+set -e
+
+# this script should only be sourced
+if [ "$(basename $0)" = "common-launcher" ]; then
+    log_err "Please do not run $0, source it"
+    exit 1
+
+fi
+
+usage()
+{
+    #TODO need to fix completion. It should sudgest completions from the begining if we reach the end of the line
+    echo "Usage: $(basename $0) [COMMAND] ..."
+    echo "Common launching arguments:"
+    echo "  -h|--help                          	- gets this help"
+    echo "  -V|--verbose                       	- Write debug messages"
+    echo "  -s|--silent                        	- Do not write log messages"
+    echo "  -X|--gui                           	- Provide GUI support inside docker"
+    echo "  -i|--image <DOCKER_IMAGE>          	- Force using docker image name"
+    echo "  -n|--non-interactive               	- remove interactity (-i -t of docker run)"
+    echo "  -a|--args ARGS                     	- additional params to docker (ie interactivity -i -t of docker run)"
+    echo "  -c|--cpus NUMBER                   	- limit docker CPU core usage"
+    echo "  -p|--path-substitute               	- replace inner docker path with host one"
+    echo "The following are valid commands:"
+    call_help
+}
+
+DEVENV_INTERACTIVE=${DEVENV_INTERACTIVE:--it}
+
+#TODO change to getopt. there is an issu with --
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -X|--gui)
+            DEVENV_ENVS+=";DISPLAY=${DISPLAY}"
+            DEVENV_VOLUMES+=";/tmp/.X11-unix:/tmp/.X11-unix"
+            # needed only for apps that require more than fb to work (ex. qml)
+            DEVENV_DEVS+=";/dev/dri"
+            shift
+            ;;
+        -s|--silent)
+            DEVENV_LOG_SILENT=true
+            shift
+            ;;
+        -V|--verbose)
+            DEVENV_LOG_VERBOSE=true
+            shift
+            ;;
+        -i|--image)
+            DEVENV_IMAGE=$2
+            shift 2
+            ;;
+        -a|--args)
+            DEVENV_ARGS+=" $2"
+            shift 2
+            ;;
+        -n|--non-interactive)
+            DEVENV_INTERACTIVE=""
+            shift
+            ;;
+        -c|--cpus)
+            MAX_CPUS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            if [ -z "$2" ]; then
+                usage
+                exit 0
+            fi
+            DEVENV_LOG_SILENT=true
+            break
+            ;;
+        -p|--path-substitute)
+            DEVENV_PATHSUBSTITUTE="yes"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+[ -n "$MAX_CPUS" ] && DEVENV_ARGS+=" --cpus $MAX_CPUS" || MAX_CPUS="unlimited"
+
+DEVENV_ROOT=""
+
+######## Perform host actions from caller script (devenv-aosp/devenv-yocto-/devenv-cmake)
+call_host "$@"
+
+# Check that the caller script setup root of the sources
+if [ -z "$DEVENV_ROOT" -o -z "$DEVENV_DOCKER_ROOT" ]; then
+   log_err "Root source directory is not set"
+   exit 1
+fi
+
+# Append pwd to extra args to run command in current path
+if [[ ! $PWD =~ ^$DEVENV_ROOT ]]; then
+   log_err "You are not inside $DEVENV_ROOT"
+   exit 1
+fi
+
+# Setup sources to be mounted at the same path inside container
+# $DEVENV_ROOT=$DEVENV_DOCKER_ROOT
+# BUT! It will deny moving of sources and build artifacts within the host
+# (ie bblayers.conf has absolute pathes inside)
+# Or be happy to rebuild everything from scratch
+DEVENV_VOLUMES+=";$DEVENV_ROOT:$DEVENV_DOCKER_ROOT"
+DEVENV_ENVS+=";DEVENV_ROOT=$DEVENV_DOCKER_ROOT;HOST_PATH=$DEVENV_ROOT"
+DEVENV_WORKDIR="$DEVENV_DOCKER_ROOT${PWD#$DEVENV_ROOT}"
+DEVENV_ARGS+=" -w $DEVENV_WORKDIR"
+
+# Set uid and gid to match host current user as long as NOT root
+DEVENV_UID=$(id -u)
+if [ $UID -ne "0" ]; then
+    DEVENV_ENVS+=";USER_ID=$DEVENV_UID;GROUP_ID=$(id -g)"
+fi
+
+# Path existing ssh socket to docker for access to host keys
+if [ -S "$SSH_AUTH_SOCK" ]; then
+    DEVENV_VOLUMES+=";$SSH_AUTH_SOCK:/tmp/ssh_auth"
+    DEVENV_ENVS+=";SSH_AUTH_SOCK=/tmp/ssh_auth"
+else
+    log_err "WARNING: SSH_AUTH_SOCK not set please run eval ssh-agend and add key to it"
+fi
+
+DEVENV_ARGS+=" --rm -h $DEVENV_IMAGE -v $(cd $(dirname $0) && pwd -P)/$(basename $0):/usr/local/bin/devenv_launcher.sh:ro"
+
+# Parse volumes and form parameter string
+set -f                             # avoid globbing (expansion of *).
+VOL_ARRAY=(${DEVENV_VOLUMES//;/ }) # split multipath string into array (expected "host_path1:docker_path1;host_path2/some:docker_path2;...")
+for PATH_PAIR in ${VOL_ARRAY[@]}
+do
+    PATH_ARR=(${PATH_PAIR//:/ }) # split path pair into array for modifications (expected "path1:path2/someplace/some:...")
+    HOST_PATH=${PATH_ARR[0]%/}   # clear trailing slash if present
+    # ensure path exists
+    [ -e "$HOST_PATH" ] && VOLUMES+=" -v $HOST_PATH:${PATH_ARR[1]}"
+done
+DEVENV_VOLUMES=$VOLUMES
+
+$DEVENV_LOG_SILENT && DEVENV_ENVS+=";DEVENV_LOG_SILENT=true" || DEVENV_ENVS+=";DEVENV_LOG_SILENT=false"
+$DEVENV_LOG_VERBOSE && DEVENV_ENVS+=";DEVENV_LOG_VERBOSE=true" || DEVENV_ENVS+=";DEVENV_LOG_VERBOSE=false"
+# Parse enviromental variables
+ENV_ARRAY=(${DEVENV_ENVS//;/ }) # split multivariable into array (expected "VAR1=somevalue;VAR2=somevalue:..."
+for ENV in ${ENV_ARRAY[@]}
+do
+    ENVIROMENT_VARS+=" -e $ENV"
+done
+DEVENV_ENVS=$ENVIROMENT_VARS
+
+# Parse devices
+DEV_ARRAY=(${DEVENV_DEVS//;/ }) # split multivariable into array (expected "dev1;dev2;..."
+for DEV in ${DEV_ARRAY[@]}
+do
+    DEVICES+=" --device=$DEV"
+done
+DEVENV_DEVS=$DEVICES
+
+set +f
+
+if [ "$1" == "--help" ]; then
+    eval "echo \$$2"
+    exit 0
+fi
+
+log_info "Starting Development Environment $(basename $0)..."
+log_dbg "Image: $DEVENV_IMAGE"
+log_dbg "Source root: $DEVENV_ROOT"
+log_dbg "Workdir: $DEVENV_WORKDIR"
+log_dbg "Args: $DEVENV_ARGS"
+log_dbg "Extra args: $DEVENV_EXTRA_ARGS"
+log_dbg "Volumes: ${VOL_ARRAY[@]}"
+log_dbg "Envvars: ${ENV_ARRAY[@]}"
+log_dbg "Devices: ${DEV_ARRAY[@]}"
+log_dbg "Docker CPUs limit: $MAX_CPUS"
+log_dbg $(echo "Full docker cmdline: (docker run \
+            $DEVENV_INTERACTIVE \
+            $DEVENV_ARGS \
+            $DEVENV_EXTRA_ARGS \
+            $DEVENV_VOLUMES \
+            $DEVENV_ENVS \
+            $DEVENV_DEVS \
+            $DEVENV_IMAGE \
+            devenv_launcher.sh $@)" | xargs)
+
+set +e
+
+#TODO remove duplicate
+if [ -n "$DEVENV_PATHSUBSTITUTE" ]; then
+    DEVENV_PATHSUBSTITUTE="s|${DEVENV_DOCKER_ROOT}|${DEVENV_ROOT}|"
+    docker run \
+	   $DEVENV_INTERACTIVE \
+	   $DEVENV_ARGS \
+	   $DEVENV_EXTRA_ARGS \
+	   $DEVENV_VOLUMES \
+	   $DEVENV_ENVS \
+	   $DEVENV_DEVS \
+	   $DEVENV_IMAGE devenv_launcher.sh "$@" \
+	   2> >(sed -e "$DEVENV_PATHSUBSTITUTE") 1> >(sed -e "$DEVENV_PATHSUBSTITUTE")
+else
+    docker run \
+	   $DEVENV_INTERACTIVE \
+	   $DEVENV_ARGS \
+	   $DEVENV_EXTRA_ARGS \
+	   $DEVENV_VOLUMES \
+	   $DEVENV_ENVS \
+	   $DEVENV_DEVS \
+	   $DEVENV_IMAGE devenv_launcher.sh "$@"
+fi
+
+ERROR=${PIPESTATUS[0]}
+log_info "Devenv exits with code: $ERROR"
+exit $ERROR

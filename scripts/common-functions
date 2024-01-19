@@ -1,0 +1,80 @@
+#!/bin/bash
+
+#
+# Common wrapper to run commands in the docker container
+#
+set -e
+
+DEVENV_LOG_SILENT=${DEVENV_LOG_SILENT:-false}
+DEVENV_LOG_VERBOSE=${DEVENV_LOG_VERBOSE:-false}
+
+if [ "$(dirname $BASH_SOURCE)" = "/usr/bin" ]; then
+    LOG_PREFIX=" D |"
+else
+    LOG_PREFIX=" H |"
+fi
+
+perform_call()
+{
+    local MESSAGE=$1
+    eval $2
+    ERROR=$?
+    [ $ERROR -eq 0 ] && log_info "$MESSAGE :done" || log_err "$MESSAGE : error($ERROR)"
+}
+
+log_info()
+{
+    $DEVENV_LOG_SILENT || echo "$LOG_PREFIX [I] $@"
+}
+log_err()
+{
+    echo "$LOG_PREFIX [E] $@" >&2
+}
+log_dbg()
+{
+    ! $DEVENV_LOG_VERBOSE || $DEVENV_LOG_SILENT || echo "$LOG_PREFIX [D] $@"
+}
+
+function do_init
+{
+    if [ ! -r "$DEVENV_MANIFEST" ]; then
+        log_err "Define DEVENV_MANIFEST variable to real path"
+        false
+    fi
+    repo init -u file://$(realpath $DEVENV_MANIFEST) --standalone-manifest
+}
+
+function do_state
+{
+    if [ -d ".repo" ];then
+        REPO_OUT="$(repo status 2>/dev/null)"
+        REPO_RES=$?
+        [ $REPO_RES ] && echo "ready" || echo $REPO_OUT
+    else
+        echo "empty"
+    fi
+}
+
+function do_sync
+{
+    if [ ! -r "$DEVENV_MANIFEST" ]; then
+        log_err "Define DEVENV_MANIFEST variable to real path"
+        false
+    fi
+    cp -f $(realpath $DEVENV_MANIFEST) .repo/manifests/default.xml
+    repo sync --force-sync "$@"
+}
+
+#  TODO: add here some do_clean dist do-clean-build and some more functions and clean up scenarios.
+function do_clean
+{
+    if [ -z "$DEVENV_BUILDDIR" ]; then
+        log_err "Define DEVENV_BUILDDIR variable to real path"
+        false
+    fi
+    repo clean
+    if [ "$1" == "all" ]; then
+         rm -rf ".repo" > /dev/null 2>&1
+         rm -rf $DEVENV_BUILDDIR > /dev/null 2>&1
+    fi
+}

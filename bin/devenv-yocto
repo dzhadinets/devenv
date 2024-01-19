@@ -1,0 +1,225 @@
+#!/bin/bash
+
+set -e
+
+YOCTO_ENV_VERSION="0.3"
+PATH=$PATH:$(cd $(dirname $0) && pwd -P)/../scripts/ source common-functions
+
+call_help()
+{
+    # Commands and parameters list is used by bash completition
+    # See ../scripts/completion.bash for more info
+    echo "  --|shell [<CMD>]                   	- launches shell inside the docker with optional command CMD"
+    echo "  s|sync [<sync_params>]             	- sync sources"
+    echo "  c|clean                            	- clean workdir"
+    echo "  r|run [<runqemu_params>]           	- run QEMU (console only)"
+    echo "  dt|devtool <params>                	- call devtool with params"
+    echo "  g|graph <recepie>                  	- build graph of BSP dependencies."
+    echo "  deploy [<deploy_params>]           	- deploy built image"
+    echo "  find [<find_pattern>]              	- find for recipes by pattern with ?*"
+    echo "  <deploy_params>                    	- both parameters must be specified NOT_IMEPLENTED"
+    echo "    <image>                          	- image to flash"
+    echo "    <device>                         	- device"
+    echo "  <sync_params>                      	- sync parameters"
+    echo "    init                             	- create project basing on project.setup"
+    echo "    state                            	- get state of working directory"
+    echo "    workspace                        	- additionally do build of workdir"
+}
+
+call_host()
+{
+    DEVENV_IMAGE=${DEVENV_IMAGE:-devenv_yocto}
+    DEVENV_ROOT=${YOCTO_VOL:-$PWD}
+    DEVENV_DOCKER_ROOT="/yocto"
+
+    [ -n "${YOCTO_DNLD}" ] && DEVENV_VOLUMES+=";$(realpath ${YOCTO_DNLD}):/downloads"
+
+    if [ "$1" == "run" ]; then
+        DEVENV_DEVS+=";/dev/net/tun:/dev/net/tun"
+        # QEMU brings up tun interface and requires sysfs in rw mode.
+        # it is partially possible to solve this with --cap-add=NET_ADMIN
+        # but I do not know how to make sysfs writable. therefore --privileged
+        DEVENV_ARGS+=" --privileged"
+    fi
+
+    if [ "$1" == "deploy" ]; then
+        $(cd $(dirname $0)/../yocto && pwd -P)/bmap_deploy "${BUILDDIR:-build}"
+        exit 0
+    fi
+}
+
+function do_prepare
+{
+    if [ -z "$DEVENV_BUILDDIR" ]; then
+        log_err "Define DEVENV_BUILDDIR variable to real path"
+        false
+    fi
+    export MACHINE BUILD_ID DISTRO
+    source sources/poky/oe-init-build-env $DEVENV_BUILDDIR > /dev/null
+}
+
+function do_workspace
+{
+    if [ -z "$DEVENV_BUILDDIR" ]; then
+        log_err "Define DEVENV_BUILDDIR variable to real path"
+        false
+    fi
+    cd $DEVENV_BUILDDIR
+    if [ -z "${YOCTO_LAYERS[*]}" ]; then
+        log_err "Define YOCTO_LAYERS variable"
+        false
+    fi
+    bitbake-layers add-layer ${YOCTO_LAYERS[@]}
+}
+
+function do_build
+{
+    bitbake core-image-minimal
+}
+
+bb_prepare()
+{
+    do_prepare
+    BB_VERSION=$(bitbake --version | cut --delimiter=' ' -f6 | cut -d. -f1)
+    if [ -n "$DL_DIR" ];then
+        if [ $BB_VERSION -lt 2 ];then
+            export BB_ENV_EXTRAWHITE+=" DL_DIR MACHINE DISTRO"
+        else
+            export BB_ENV_PASSTHROUGH_ADDITIONS+=" DL_DIR MACHINE DISTRO"
+        fi
+    fi
+}
+
+call_docker()
+{
+    # Current dir is docker workdir.
+    pushd $DEVENV_ROOT > /dev/null 2>&1
+
+    local CPUS=$(grep ^processor /proc/cpuinfo | wc -l)
+
+    YOCTO_CONF_VERSION=""
+
+    log_info "Prepare YOCTO dev environment"
+    if ! source project.setup ; then
+        log_err "The dir does not contain project.setup or it's broken."
+        exit 1
+    fi
+
+    local MAJOR_ENV_VERSION=$(echo $YOCTO_ENV_VERSION | cut -d. -f1)
+    local MAJOR_CONF_VERSION=$(echo $YOCTO_CONF_VERSION | cut -d. -f1)
+
+    if [ "$MAJOR_ENV_VERSION" != "$MAJOR_CONF_VERSION" ]; then
+        if [ -z "$MAJOR_CONF_VERSION" ]; then
+            log_err "Set YOCTO_CONF_VERSION variable in project.setup"
+        else
+            log_err "Config versions are incompatible, Your is $MAJOR_CONF_VERSION. Env is $MAJOR_ENV_VERSION."
+            log_err "Read the history of changes in README.md and update project.setup"
+        fi
+        exit 1
+    fi
+
+    [ -d "/downloads" ] && export DL_DIR="/downloads"
+
+    local STATE=$(do_state)
+
+    if [ "$#" -eq 0 ]; then
+        log_dbg "Build default Yocto recipe"
+        # check for existing sources and do sync as needed
+        if [ "$STATE" == "empty" ]; then
+            log_dbg "'$PWD' dir is empty. Initializing.."
+            do_init
+        fi
+        if [ "$STATE" != "ready" ]; then
+            log_dbg "'$PWD' dir does not contain sources. Syncing.."
+            do_sync
+            cd $DEVENV_ROOT
+            bb_prepare
+            cd $DEVENV_ROOT
+            do_workspace
+            cd $DEVENV_ROOT
+        else
+            bb_prepare
+            cd $DEVENV_ROOT
+        fi
+        cd $DEVENV_ROOT
+        do_build
+        exit $?
+    fi
+
+    if [ "$STATE" == "empty" ]; then
+        log_err "Work tree is empty. Some functions may work incorrectly."
+    else
+        log_dbg "Prepare YOCTO dev environment"
+        bb_prepare
+    fi
+    popd > /dev/null 2>&1
+
+    # handle the command
+    case $1 in
+        --|shell)
+            shift
+            if [ $# -eq 0 ]; then
+                log_dbg "Enterring shell"
+                exec bash
+            else
+                log_dbg "Execute command '$@' by path '$PWD'"
+                exec "$@"
+            fi
+            ;;
+        s|sync)
+            shift
+            cd $DEVENV_ROOT
+            case $1 in
+                init)
+                    do_init "$@"
+                    ;;
+                state)
+                    do_state "$@"
+                    ;;
+                workspace)
+                    do_workspace "$@"
+                    ;;
+                *)
+                    do_sync "$@"
+                    ;;
+            esac
+            ;;
+        c|clean)
+            shift
+            do_clean "$@"
+            ;;
+        r|run)
+            shift
+#            runqemu qemuparams="-device virtio-serial-device -chardev null,id=virtcon -device virtconsole,chardev=virtcon" nographic "$@"
+            runqemu nographic "$@"
+            ;;
+        g|graph)
+            shift
+ # Todo make fancy
+            log_info "Building graph for $1 ($2)"
+            bitbake -g $1 >/dev/null
+            dependency-graph "task-depends.dot" "$@"
+            log_info "Graph is here $1.dot"
+            rm task-depends.dot pn-buildlist
+            shift $#
+            ;;
+        dt|devtool)
+            shift
+            devtool "$@"
+            ;;
+        f|find)
+            shift
+            bitbake-layers show-recipes -fb "*$@*"
+            ;;
+        *)
+            log_info "Execute bitbake with '$@' params"
+            bitbake "$@"
+            ;;
+    esac
+}
+
+if [ "$(basename $0)" == "devenv_launcher.sh" ]; then
+    call_docker "$@"
+else
+    source $(cd $(dirname $0) && pwd -P)/../scripts/common-launcher "$@"
+fi

@@ -1,0 +1,25 @@
+#!/bin/sh
+
+OUTFILE="$2.dot"
+echo "strict digraph \"\" {" > $OUTFILE
+echo "rankdir=LR" >> $OUTFILE
+echo "node [shape=box]" >> $OUTFILE
+echo "\"$2\" [shape=component]" >> $OUTFILE
+
+cat $1 \
+   | grep -v native \
+   | grep do_packagedata \
+   | grep -v gcc-runtime \
+   | grep -v glibc \
+   | grep -v libgcc \
+   | grep -v linux-libc-headers \
+   | { [ -n "$3" ] && grep $3 || cat - ; } \
+   | sed 's/\.do_[^"]*//g' \
+   | sed 's/\sdo_.*:/#/' \
+   | sed 's/\\n/" tooltip="/' \
+   | sed 's/#/\\n/' \
+   | sed -E 's/"([^"]*)" -> "\1"//' \
+   | sort \
+   | uniq \
+   >> $OUTFILE
+echo "}" >> $OUTFILE

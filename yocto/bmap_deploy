@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -e
+
+TITLE="Deploy YOCTO image"
+
+if [ -z "$1" ] || [ ! -d  "$1" ]; then
+    echo "ERROR: Provide builddir as a parameter" 1>&2
+    exit 1
+fi
+
+DEVICES=()
+while IFS=" " read -r NAME SIZE HOTPLUG MODEL; do
+    if [ "$HOTPLUG" == "1" ]; then
+        DEVICES+=("$NAME" "$NAME ($SIZE) $MODEL")
+    fi
+done < <(lsblk -pnd -o NAME,SIZE,HOTPLUG,MODEL)
+
+DEVICES+=("fake" "fake (10Mb) Fake")
+
+if [ ${#DEVICES[@]} -eq 0 ]; then
+    echo "ERROR: There are no suitable devices" 1>&2
+    exit 1
+fi
+
+DEVICE=`whiptail --notags --fb --title "$TITLE" --menu "Choose the device" 8 78 0 "${DEVICES[@]}"  3>&1 1>&2 2>&3`
+
+IMAGES=()
+
+for MAP in $1/tmp/deploy/images/*/*.bmap
+do
+    for FILE in $(ls ${MAP%.bmap}.*)
+    do
+        [ "$FILE" != "$MAP" ] && IMAGES+=( "$FILE" "$(basename $FILE)")
+    done
+done
+
+IMAGE=`whiptail --nocancel --notags --fb --title "$TITLE" --menu "Choose the image" 8 78 0 "${IMAGES[@]}"  3>&1 1>&2 2>&3`
+
+sudo -Nnv 2>/dev/null || PSW=`whiptail --nocancel --notags --fb --title "$TITLE" --passwordbox "Enter your password. Flashing requires privileges" 10 60 3>&1 1>&2 2>&3`
+if ! echo "$PSW" | sudo -Sv 2>/dev/null ;then
+    echo "ERROR: Cannot authenticate"
+    exit 1
+fi
+sudo umount $DEVICE?* 2>/dev/null || true
+sudo bmaptool -d copy $IMAGE $DEVICE 3>&1 1>&2 2>&3 | sed -Eun 's/.*\(([[:digit:]]+)\%\).*/\1/p' 2>/dev/null \
+  | whiptail --title "$TITLE" --gauge "Flashing..." 8 78 0
