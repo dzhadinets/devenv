@@ -35,7 +35,10 @@ log_dbg "Copying .gitconfig and .ssh/config to new user home" && \
 export HOME=/home/$DOCKER_USER
 
 for f in /start.d/* ; do
-    [ -x $f ]  && [ ! -d $f ] && log_dbg "Starting $f" && source $f
+    if [ -x $f ]  && [ ! -d $f ]; then
+        log_dbg "Starting $f"
+        source $f
+    fi
 done
 
 # Make dir for .pid file at /var/run/user/${USER_ID}
@@ -46,9 +49,11 @@ set +e
 args="$@"
 if [ $# -eq 0 ]; then
     log_dbg "Enterring shell"
-    exec sudo -E -s -u $DOCKER_USER
+#    exec sudo -E -s -u $DOCKER_USER
+    sudo -u $DOCKER_USER -s -E env "PATH=$PATH"
 else
     log_dbg "Performing ...'$args'"
-    exec sudo -E -s -u $DOCKER_USER "$@"
+#    exec sudo -E -s -u $DOCKER_USER "$@"
+    sudo -s -u $DOCKER_USER -E env "PATH=$PATH" "$@"
 fi
 exit $?

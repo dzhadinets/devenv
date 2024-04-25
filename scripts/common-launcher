@@ -123,7 +123,7 @@ if [ -S "$SSH_AUTH_SOCK" ]; then
     DEVENV_VOLUMES+=";$SSH_AUTH_SOCK:/tmp/ssh_auth"
     DEVENV_ENVS+=";SSH_AUTH_SOCK=/tmp/ssh_auth"
 else
-    log_err "WARNING: SSH_AUTH_SOCK not set please run eval ssh-agend and add key to it"
+    log_err "WARNING: SSH_AUTH_SOCK not set please run 'eval `ssh-agent`' and add key to it"
 fi
 
 DEVENV_ARGS+=" --rm -h $DEVENV_IMAGE -v $(cd $(dirname $0) && pwd -P)/$(basename $0):/usr/local/bin/devenv_launcher.sh:ro"

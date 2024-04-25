@@ -3,7 +3,7 @@
 set -e
 
 TITLE="Deploy YOCTO image"
-
+export NEWT_COLORS='root=white,black;window=,blue;title=blue,;border=lightgray,blue;textbox=white,blue;button=white,gray;actbutton=black,lightgray;listbox=lightgray,black;actsellistbox=gray,lightgray;actlistbox=gray,lightgray;'
 if [ -z "$1" ] || [ ! -d  "$1" ]; then
     echo "ERROR: Provide builddir as a parameter" 1>&2
     exit 1
@@ -16,7 +16,7 @@ while IFS=" " read -r NAME SIZE HOTPLUG MODEL; do
     fi
 done < <(lsblk -pnd -o NAME,SIZE,HOTPLUG,MODEL)
 
-DEVICES+=("fake" "fake (10Mb) Fake")
+DEVICES+=("fake" "fake (all free space) Fake")
 
 if [ ${#DEVICES[@]} -eq 0 ]; then
     echo "ERROR: There are no suitable devices" 1>&2
@@ -27,7 +27,7 @@ DEVICE=`whiptail --notags --fb --title "$TITLE" --menu "Choose the device" 8 78 
 
 IMAGES=()
 
-for MAP in $1/tmp/deploy/images/*/*.bmap
+for MAP in $(find $1/tmp/deploy/images/ -name *.bmap)
 do
     for FILE in $(ls ${MAP%.bmap}.*)
     do
@@ -44,4 +44,4 @@ if ! echo "$PSW" | sudo -Sv 2>/dev/null ;then
 fi
 sudo umount $DEVICE?* 2>/dev/null || true
 sudo bmaptool -d copy $IMAGE $DEVICE 3>&1 1>&2 2>&3 | sed -Eun 's/.*\(([[:digit:]]+)\%\).*/\1/p' 2>/dev/null \
-  | whiptail --title "$TITLE" --gauge "Flashing..." 8 78 0
+  | whiptail --title "$TITLE" --gauge "Flashing..." 8 7
