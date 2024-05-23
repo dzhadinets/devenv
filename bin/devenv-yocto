@@ -150,7 +150,7 @@ call_docker()
         log_err "Work tree is empty. Some functions may work incorrectly."
     else
         log_dbg "Prepare YOCTO dev environment"
-        bb_prepare
+        bb_prepare || [[ "$1" == "sync" ]]
     fi
     popd > /dev/null 2>&1
 
