@@ -55,7 +55,7 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
 # runqemu requirements
-RUN apt-get install -y  net-tools iproute2 iptables policykit-1
+RUN apt-get install -y  net-tools iproute2 iptables policykit-1 kmod bridge-utils
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
 RUN update-alternatives --config python

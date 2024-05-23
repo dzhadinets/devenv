@@ -10,4 +10,5 @@ log_dbg "Creating /tmp/ccache and /aosp directory" && \
 addgroup kvm 2>/dev/null || true
 
 gpasswd -a $DOCKER_USER kvm
-chown root:kvm /dev/kvm
+#TODO: /dev/kvm is passed as is from host need to check permission and do not change it on host side
+#chown root:kvm /dev/kvm

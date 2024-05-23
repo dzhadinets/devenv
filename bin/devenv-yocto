@@ -35,11 +35,13 @@ call_host()
     [ -n "${YOCTO_DNLD}" ] && DEVENV_VOLUMES+=";$(realpath ${YOCTO_DNLD}):/downloads"
 
     if [ "$1" == "run" ]; then
-        DEVENV_DEVS+=";/dev/net/tun:/dev/net/tun"
-        # QEMU brings up tun interface and requires sysfs in rw mode.
+        DEVENV_DEVS+=";/dev/kvm"
+        DEVENV_DEVS+=";/dev/net/tun"        # QEMU brings up tun interface and requires sysfs in rw mode.
         # it is partially possible to solve this with --cap-add=NET_ADMIN
         # but I do not know how to make sysfs writable. therefore --privileged
         DEVENV_ARGS+=" --privileged"
+        #TODO : check GUI param
+        xhost +
     fi
 
     if [ "$1" == "deploy" ]; then
