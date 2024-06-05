@@ -62,7 +62,7 @@ function do_sync
         false
     fi
     cp -f $(realpath $DEVENV_MANIFEST) .repo/manifests/default.xml
-    repo sync --force-sync "$@"
+    repo sync --force-sync -j $CPUS "$@"
 }
 
 #  TODO: add here some do_clean dist do-clean-build and some more functions and clean up scenarios.

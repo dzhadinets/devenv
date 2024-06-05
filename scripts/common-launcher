@@ -20,6 +20,7 @@ usage()
     echo "  -V|--verbose                       	- Write debug messages"
     echo "  -s|--silent                        	- Do not write log messages"
     echo "  -X|--gui                           	- Provide GUI support inside docker"
+    echo "  -k|--kvm                           	- Pass KVM device into docker and create according group"
     echo "  -i|--image <DOCKER_IMAGE>          	- Force using docker image name"
     echo "  -n|--non-interactive               	- remove interactity (-i -t of docker run)"
     echo "  -a|--args ARGS                     	- additional params to docker (ie interactivity -i -t of docker run)"
@@ -39,6 +40,16 @@ while [[ $# -gt 0 ]]; do
             DEVENV_VOLUMES+=";/tmp/.X11-unix:/tmp/.X11-unix"
             # needed only for apps that require more than fb to work (ex. qml)
             DEVENV_DEVS+=";/dev/dri"
+            shift
+            ;;
+        -k|--kvm)
+            if [ -e /dev/kvm ]; then
+                DEVENV_DEVS+=";/dev/kvm"
+                #needed by entrypoint to create proper group id
+                DEVENV_ENVS+=";KVM_GID=$(cut -d: -f3 < <(getent group kvm))"
+            else
+                log_err "/dev/kvm device does not exist on host machine. Did you install kvm drivers?"
+            fi
             shift
             ;;
         -s|--silent)
