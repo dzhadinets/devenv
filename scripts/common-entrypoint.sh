@@ -24,7 +24,7 @@ echo "$DOCKER_USER:$DOCKER_USER" | chpasswd
 log_dbg "Adding user $DOCKER_USER to group video"
 adduser $DOCKER_USER video >/dev/null
 
-if [ -n $KVM_GID] ; then
+if [ -n "$KVM_GID" ] ; then
     log_dbg "Adding user $DOCKER_USER to group kvm"
     groupadd --system -r kvm -g $KVM_GID
     adduser $DOCKER_USER kvm >/dev/null
