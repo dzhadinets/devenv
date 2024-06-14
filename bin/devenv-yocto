@@ -83,12 +83,10 @@ bb_prepare()
 {
     do_prepare
     BB_VERSION=$(bitbake --version | cut --delimiter=' ' -f6 | cut -d. -f1)
-    if [ -n "$DL_DIR" ];then
-        if [ $BB_VERSION -lt 2 ];then
-            export BB_ENV_EXTRAWHITE+=" DL_DIR MACHINE DISTRO"
-        else
-            export BB_ENV_PASSTHROUGH_ADDITIONS+=" DL_DIR MACHINE DISTRO"
-        fi
+    if [ $BB_VERSION -lt 2 ];then
+        export BB_ENV_EXTRAWHITE+=" DL_DIR MACHINE DISTRO BUILD_ID"
+    else
+        export BB_ENV_PASSTHROUGH_ADDITIONS+=" DL_DIR MACHINE DISTRO BUILD_ID"
     fi
 }
 

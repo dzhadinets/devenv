@@ -16,7 +16,7 @@ while IFS=" " read -r NAME SIZE HOTPLUG MODEL; do
     fi
 done < <(lsblk -pnd -o NAME,SIZE,HOTPLUG,MODEL)
 
-DEVICES+=("fake" "fake (all free space) Fake")
+DEVICES+=("fake.bin" "./fake.bin ($(df -hl --output=avail . | tail -n1)) Fake storage")
 
 if [ ${#DEVICES[@]} -eq 0 ]; then
     echo "ERROR: There are no suitable devices" 1>&2
@@ -44,4 +44,4 @@ if ! echo "$PSW" | sudo -Sv 2>/dev/null ;then
 fi
 sudo umount $DEVICE?* 2>/dev/null || true
 sudo bmaptool -d copy $IMAGE $DEVICE 3>&1 1>&2 2>&3 | sed -Eun 's/.*\(([[:digit:]]+)\%\).*/\1/p' 2>/dev/null \
-  | whiptail --title "$TITLE" --gauge "Flashing..." 8 7
+  | whiptail --title "$TITLE" --gauge "Flashing..." 8 78 0
