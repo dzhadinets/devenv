@@ -34,12 +34,12 @@ call_host()
 
     [ -n "${YOCTO_DNLD}" ] && DEVENV_VOLUMES+=";$(realpath ${YOCTO_DNLD}):/downloads"
 
-    if [ "$1" == "run" ]; then
-        DEVENV_DEVS+=";/dev/kvm"
+    if [[ "$1" == "run" || "$1" == "r" ]]; then
         DEVENV_DEVS+=";/dev/net/tun"        # QEMU brings up tun interface and requires sysfs in rw mode.
         # it is partially possible to solve this with --cap-add=NET_ADMIN
         # but I do not know how to make sysfs writable. therefore --privileged
-        DEVENV_ARGS+=" --privileged"
+        #check if priviliged was already set, if not - set it
+        [[ ! $DEVENV_ARGS =~ .*privileged.* ]] && DEVENV_ARGS+=" --privileged"
         #TODO : check GUI param
         xhost +
     fi
@@ -190,8 +190,11 @@ call_docker()
             ;;
         r|run)
             shift
+            RUNQEMU_PARAMS="nographic "
+            [ -n $KVM_GID ] && RUNQEMU_PARAMS+=" kvm"
+            log_dbg "runqemu params: $RUNQEMU_PARAMS"
 #            runqemu qemuparams="-device virtio-serial-device -chardev null,id=virtcon -device virtconsole,chardev=virtcon" nographic "$@"
-            runqemu nographic "$@"
+            runqemu $RUNQEMU_PARAMS "$@"
             ;;
         g|graph)
             shift
