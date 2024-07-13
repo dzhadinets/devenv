@@ -7,7 +7,6 @@ echo "node [shape=box]" >> $OUTFILE
 echo "\"$2\" [shape=component]" >> $OUTFILE
 
 cat $1 \
-   | grep -v native \
    | grep do_packagedata \
    | grep -v gcc-runtime \
    | grep -v glibc \
@@ -23,3 +22,7 @@ cat $1 \
    | uniq \
    >> $OUTFILE
 echo "}" >> $OUTFILE
+
+# Native tasks may take time so cannot ignore it
+#   | grep -v native \
+#

@@ -97,6 +97,7 @@ done
 [ -n "$MAX_CPUS" ] && DEVENV_ARGS+=" --cpus $MAX_CPUS" || MAX_CPUS="unlimited"
 
 DEVENV_ROOT=""
+DEVENV_PROJECT_FILE=project.setup
 
 ######## Perform host actions from caller script (devenv-aosp/devenv-yocto-/devenv-cmake)
 call_host "$@"
@@ -119,7 +120,7 @@ fi
 # (ie bblayers.conf has absolute pathes inside)
 # Or be happy to rebuild everything from scratch
 DEVENV_VOLUMES+=";$DEVENV_ROOT:$DEVENV_DOCKER_ROOT"
-DEVENV_ENVS+=";DEVENV_ROOT=$DEVENV_DOCKER_ROOT;HOST_PATH=$DEVENV_ROOT"
+DEVENV_ENVS+=";DEVENV_ROOT=$DEVENV_DOCKER_ROOT;HOST_PATH=$DEVENV_ROOT;DEVENV_PROJECT_FILE=$DEVENV_PROJECT_FILE"
 DEVENV_WORKDIR="$DEVENV_DOCKER_ROOT${PWD#$DEVENV_ROOT}"
 DEVENV_ARGS+=" -w $DEVENV_WORKDIR"
 

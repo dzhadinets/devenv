@@ -26,8 +26,8 @@ adduser $DOCKER_USER video >/dev/null
 
 if [ -n "$KVM_GID" ] ; then
     log_dbg "Adding user $DOCKER_USER to group kvm"
-    groupadd --system -r kvm -g $KVM_GID
-    adduser $DOCKER_USER kvm >/dev/null
+#    groupadd --system -r kvm -g $KVM_GID
+#    adduser $DOCKER_USER kvm >/dev/null
 fi
 
 log_dbg "Copying .gitconfig and .ssh/config to new user home" && \

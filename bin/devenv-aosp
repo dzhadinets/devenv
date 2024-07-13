@@ -58,14 +58,21 @@ call_help()
 
 call_host()
 {
+    DEVENV_ROOT=${AOSP_VOL:-$PWD}
+
+    log_info "Prepare AOSP dev environment."
+    if [ ! -f "${DEVENV_ROOT}/$DEVENV_PROJECT_FILE" ]; then
+        echo "The dir (${DEVENV_ROOT}) does not contain $DEVENV_PROJECT_FILE"
+    else
+        source ${DEVENV_ROOT}/$DEVENV_PROJECT_FILE
+    fi
+
     if [ -z "$DOCKER_IMAGE" ]; then
         log_err "Please set environment AOSP_IMAGE. I.e. export DOCKER_IMAGE=devenv_android:aosp8"
         exit
     fi
 
-    DEVENV_ROOT=${AOSP_VOL:-$PWD}
     DEVENV_DOCKER_ROOT="/aosp"
-
     AOSP_OUT_DIR=${AOSP_OUT_DIR:-out}
     AOSP_OUT_DIR=${AOSP_OUT_DIR%/} # Trim trailing slash if needed (edited)
     DOCKER_ENVS+=";OUT_DIR=$AOSP_OUT_DIR"
@@ -86,21 +93,17 @@ call_docker()
 
     AOSP_CONF_VERSION=""
 
-    log_info "Prepare AOSP dev environment"
-    if ! source project.setup ; then
-        log_err "The dir does not contain project.setup or it's broken."
-        exit 1
-    fi
+    source $DEVENV_PROJECT_FILE
 
     MAJOR_ENV_VERSION=$(echo $AOSP_ENV_VERSION | cut -d. -f1)
     MAJOR_CONF_VERSION=$(echo $AOSP_CONF_VERSION | cut -d. -f1)
 
     if [ "$MAJOR_ENV_VERSION" != "$MAJOR_CONF_VERSION" ]; then
         if [ -z "$MAJOR_CONF_VERSION" ]; then
-            log_err "Set AOSP_CONF_VERSION variable in project.setup"
+            log_err "Set AOSP_CONF_VERSION variable in $DEVENV_PROJECT_FILE"
         else
             log_err "Config versions are incompatible, Your is $MAJOR_CONF_VERSION. Env is $MAJOR_ENV_VERSION."
-            log_err "Read the history of changes in README.md and update project.setup"
+            log_err "Read the history of changes in README.md and update $DEVENV_PROJECT_FILE"
         fi
         exit 1
     fi

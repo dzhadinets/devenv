@@ -51,13 +51,13 @@ call_help()
 
 call_host()
 {
-    CMAKE_VOL=${CMAKE_VOL:-$PWD}
+    DEVENV_ROOT=${CMAKE_VOL:-$PWD}
 
-    log_info "Prepare dev environment"
-    if [ ! -f "$CMAKE_VOL/project.setup" ]; then
-        echo "The dir ($CMAKE_VOL) does not contain project.setup"
+    log_info "Prepare CMake dev environment"
+    if [ ! -f "${DEVENV_ROOT}/${DEVENV_PROJECT_FILE}" ]; then
+        echo "The dir (${DEVENV_ROOT}) does not contain ${DEVENV_PROJECT_FILE}"
     else
-        source $CMAKE_VOL/project.setup
+        source ${DEVENV_ROOT}/${DEVENV_PROJECT_FILE}
     fi
 
     if [ "$1" = "docker" ]; then
@@ -81,7 +81,6 @@ call_host()
 
     CMAKE_IMAGE_BASE=${CMAKE_IMAGE%:*}
     DEVENV_IMAGE=$CMAKE_IMAGE
-    DEVENV_ROOT=${CMAKE_VOL}
     DEVENV_DOCKER_ROOT="/workdir/$CMAKE_IMAGE_BASE"
 
     CMAKE_ENABLE_REGISTRY=${CMAKE_ENABLE_REGISTRY:-true}
@@ -114,18 +113,12 @@ call_docker()
     # NOTE: CPUS works not correctly. Docker cannot hide cpu core but can limit the usage (using --cpus NUM)
     # We cannot relay on /proc/cpuinfo info but trying to use everything
     CPUS=$(grep ^processor /proc/cpuinfo | wc -l)
-    if [ -z "$CMAKE_IMAGE" ]; then
-        log_err "Please set environment CMAKE_IMAGE. I.e. export CMAKE_IMAGE=devenv_cmake:ubuntu20"
-        exit 1
-    fi
 
     CMAKE_IMAGE_BASE=${CMAKE_IMAGE%:*}
     WORKDIR=/workdir/${CMAKE_IMAGE_BASE}
     BUILD_DIR=${WORKDIR}/build
 
-    if [ -f "${WORKDIR}/project.setup" ]; then
-        source ${WORKDIR}/project.setup
-    fi
+    source ${WORKDIR}/${DEVENV_PROJECT_FILE}
 
     mkdir -p ${BUILD_DIR}
 

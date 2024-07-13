@@ -45,3 +45,5 @@ fi
 sudo umount $DEVICE?* 2>/dev/null || true
 sudo bmaptool -d copy $IMAGE $DEVICE 3>&1 1>&2 2>&3 | sed -Eun 's/.*\(([[:digit:]]+)\%\).*/\1/p' 2>/dev/null \
   | whiptail --title "$TITLE" --gauge "Flashing..." 8 78 0
+sudo sync
+echo "The device ($DEVICE) is successfully flashed. You can safely unplug it" 1>&2
