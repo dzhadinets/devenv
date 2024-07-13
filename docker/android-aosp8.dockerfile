@@ -30,7 +30,7 @@ ADD https://commondatastorage.googleapis.com/git-repo-downloads/repo /usr/local/
 RUN chmod 755 /usr/local/bin/*
 
 # Security hack for jack server
-COPY docker/java.security /etc/java-8-openjdk/security/
+COPY aosp/java.security /etc/java-8-openjdk/security/
 
 # All builds will be done by user aosp
 COPY docker/git_config /root/git_config

@@ -110,10 +110,6 @@ call_host()
 
 call_docker()
 {
-    # NOTE: CPUS works not correctly. Docker cannot hide cpu core but can limit the usage (using --cpus NUM)
-    # We cannot relay on /proc/cpuinfo info but trying to use everything
-    CPUS=$(grep ^processor /proc/cpuinfo | wc -l)
-
     CMAKE_IMAGE_BASE=${CMAKE_IMAGE%:*}
     WORKDIR=/workdir/${CMAKE_IMAGE_BASE}
     BUILD_DIR=${WORKDIR}/build

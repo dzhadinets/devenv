@@ -99,8 +99,6 @@ call_docker()
     # Current dir is docker workdir.
     pushd $DEVENV_ROOT > /dev/null 2>&1
 
-    local CPUS=$(grep ^processor /proc/cpuinfo | wc -l)
-
     YOCTO_CONF_VERSION=""
 
     source $DEVENV_PROJECT_FILE

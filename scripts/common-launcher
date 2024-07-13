@@ -94,11 +94,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-[ -n "$MAX_CPUS" ] && DEVENV_ARGS+=" --cpus $MAX_CPUS" || MAX_CPUS="unlimited"
+if [ -n "$MAX_CPUS" ]; then
+    DEVENV_ARGS+=" --cpus $MAX_CPUS"
+    DEVENV_ENVS+=";CPUS=$MAX_CPUS"
+else
+    # NOTE: CPUS works not correctly. Docker cannot hide cpu core but can limit the usage (using --cpus NUM)
+    # We cannot relay on /proc/cpuinfo info but trying to use everything
+    DEVENV_ENVS+=";CPUS=$(grep ^processor /proc/cpuinfo | wc -l)"
+
+    MAX_CPUS="unlimited"
+fi
 
 DEVENV_ROOT=""
 DEVENV_PROJECT_FILE=project.setup
-
 ######## Perform host actions from caller script (devenv-aosp/devenv-yocto-/devenv-cmake)
 call_host "$@"
 

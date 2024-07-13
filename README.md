@@ -1,6 +1,6 @@
 # Docker.io Build Environment
 
-This is the a fork of my work. I will rebrand it soon.
+This is the a fork of my work. I did it under the public licence in one company.
 
 Docker-based build system is designed to provide a stable environment for every developer to build a variety of CMake, Yocto and AOSP based projects while eliminating the need for thorough manual configuration of build environment
 
@@ -15,21 +15,24 @@ The devs will catch the issues with build environment first
 - [Docker images](#install)
 - [Building scripts](#building-scripts)
   - [Common launching options](#common-launching-options)
-  - [`devenv-cmake` launching options](#cmake-launching-options)
-  - [`devenv-aosp` launching options](#aosp-launching-options)
-  - [`devenv-yocto` launching options](#yocto-launching-options)
+  - [`devenv-cmake` usage examples](#cmake-usage-examples)
+  - [`devenv-aosp` usage examples](#aosp-usage-examples)
+  - [`devenv-yocto` usage examples](#yocto-usage-examples)
+- [Project file concept](#project-file)
+  - [Project file history](#project-file-history)
 - [Environment variables](#environment-variables)
 - [Known Issues](#known-issues)
 
 ## <a name="prerequisites"></a>Prerequisites
 
 This guide have been tested on
+ - [Ubuntu 18.04 LTS](https://releases.ubuntu.com/18.04/)
  - [Ubuntu 20.04 LTS](https://releases.ubuntu.com/20.04/)
  - [Ubuntu 22.04 LTS](https://releases.ubuntu.com/22.04/)
 Adjust it accordingly if you are using another OS distribution
 
 Install packages
-`sudo apt install make docker.io gawk bmap-tools`
+`sudo apt install bash make docker.io gawk bmap-tools`
 
 Add your user to docker group
 `sudo adduser $USER docker`
@@ -50,6 +53,7 @@ Switch to your new development environment directory
 ## <a name="dev-env-directory-structure"></a>`devenv` directory structure
 
 ```
+├─aosp      # AOSP stuff
 ├─bin       # building and deployment scripts
 │ ├─devenv-aosp    # Android building script
 │ ├─devenv-cmake   # CMAKE building script
@@ -127,28 +131,28 @@ It's important if you are working with different versions of building system and
   -c|--cpus NUMBER                   	- limit docker CPU core usage
 ```
 Help command (--help) is autodocumented for each script, call it for detailed description
-### <a name="cmake-launching-options"></a>`devenv-cmake` launching options
-
-Usage examples:
+### <a name="cmake-usage-examples"></a>`devenv-cmake` usage examples
 ```bash
 ```
 
-### <a name="aosp-launching-options"></a>`devenv-aosp` launching options
-
-Usage examples:
+### <a name="aosp-usage-examples"></a>`devenv-aosp` usage examples:
 ```bash
 ```
 
-### <a name="yocto-launching-options"></a>`devenv-yocto` launching options
-
-Usage examples:
+### <a name="yocto-usage-examples"></a>`devenv-yocto` usage examples:
 ```bash
 ```
 
-Migration is not required and designed. We do not have backward compatibility.
-But the script may have other changes. In order to track them the version is the string with a template like <config_version>.<other_version>
-#### History of project.setup
-##### Version: 0
+##  <a name="project-file"></a>Project file concept
+General idea is to have some project.file which points to the root of sources and will store cusomizable parameters and fuctions for any project 
+for each kind of devenv. In order to track changes in devenv and some project there is the version on project file.
+The version is a string with a template like <config_version>.<other_version>
+Devenv will fail if config_version of a project is differ from internal one.
+Backward compatibility is enough hard to implement and I dont think it is needed at the moment.
+But migration prom previous version of the config is needed. It could be done manually using a history conf configs
+
+###  <a name="project-file-history"></a>History of project.setup
+ -  Version: 0
 ```bash
 # Example of project.setup file.
 # Implementation of each function is mandatory. Assumed, they will be called from <ROOT_WORKDIR> dir inside docker
@@ -169,7 +173,7 @@ function do_state
 }
 #Source synchronisation
 function do_sync
-{g
+{
 }
 #Prepares dev environment inside the docker
 function do_prepare
