@@ -81,7 +81,6 @@ call_host()
     AOSP_VOL_CCACHE=${AOSP_VOL_CCACHE%/} # Trim trailing slash if needed
     mkdir -p "$AOSP_VOL_CCACHE"
     DOCKER_VOLUMES+=";$AOSP_VOL_CCACHE:/tmp/ccache"
-    DOCKER_DEVS+=";/dev/kvm"
 }
 
 call_docker()

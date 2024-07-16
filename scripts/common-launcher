@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
                 #needed by entrypoint to create proper group id
                 DEVENV_ENVS+=";KVM_GID=$(cut -d: -f3 < <(getent group kvm))"
             else
-                log_err "/dev/kvm device does not exist on host machine. Did you install kvm drivers?"
+                log_err "/dev/kvm device does not exist on host machine."
             fi
             shift
             ;;
