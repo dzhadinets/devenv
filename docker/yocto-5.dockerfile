@@ -65,7 +65,7 @@ RUN apt-get install -y  net-tools iproute2 iptables policykit-1 kmod bridge-util
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1
 RUN update-alternatives --config python
-RUN apt-get install -y kmod cpu-checker
+RUN apt-get install -y kmod cpu-checker openssh-server
 
 # Install repo
 #RUN curl -o /usr/local/bin/repo https://storage.googleapis.com/git-repo-downloads/repo && chmod a+x /usr/local/bin/repo 

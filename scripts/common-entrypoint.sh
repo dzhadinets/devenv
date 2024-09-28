@@ -39,6 +39,8 @@ log_dbg "Copying .gitconfig and .ssh/config to new user home" && \
 
 # Execute command as user
 export HOME=/home/$DOCKER_USER
+# Fixes colors in menuconfig
+export TERM=xterm-color
 
 for f in /start.d/* ; do
     if [ -x $f ]  && [ ! -d $f ]; then
@@ -49,7 +51,7 @@ done
 
 # Make dir for .pid file at /var/run/user/${USER_ID}
 mkdir --parents --mode=777 /var/run/user/${USER_ID}
-
+service ssh start
 set +e
 # Default to 'bash' if no arguments are provided
 args="$@"
