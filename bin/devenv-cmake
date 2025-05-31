@@ -55,7 +55,7 @@ call_host()
 
     log_info "Prepare CMake dev environment"
     if [ ! -f "${DEVENV_ROOT}/${DEVENV_PROJECT_FILE}" ]; then
-        echo "The dir (${DEVENV_ROOT}) does not contain ${DEVENV_PROJECT_FILE}"
+        log_err "The dir (${DEVENV_ROOT}) does not contain ${DEVENV_PROJECT_FILE}"
     else
         source ${DEVENV_ROOT}/${DEVENV_PROJECT_FILE}
     fi

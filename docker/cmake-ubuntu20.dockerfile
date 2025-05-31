@@ -48,7 +48,6 @@ RUN apt-get install -y \
     nodejs \
     clangd
 
-# install cmake essential packages
 RUN apt-get install -y \
     clangd \
     cppcheck
