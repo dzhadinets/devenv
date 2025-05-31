@@ -27,17 +27,21 @@ DEVICE=`whiptail --notags --fb --title "$TITLE" --menu "Choose the device" 8 78 
 
 IMAGES=()
 
-for MAP in $(find $1/tmp/deploy/images/ -name *.bmap)
+#for MAP in $(find $1/tmp/deploy/images/ -regex '.*[^0-9]+\.bmap')
+#do
+#    for FILE in $(ls ${MAP%.bmap}.*)
+#    do
+#        [ "$FILE" != "$MAP" ] && IMAGES+=( "$FILE" "$(basename $FILE)")
+#    done
+#done
+for FILE in $(find $1/tmp/deploy/images/ -regex '.*[^0-9]+\.wic\.xz')
 do
-    for FILE in $(ls ${MAP%.bmap}.*)
-    do
-        [ "$FILE" != "$MAP" ] && IMAGES+=( "$FILE" "$(basename $FILE)")
-    done
+    [ "$FILE" != "$MAP" ] && IMAGES+=( "$FILE" "$(basename $FILE)")
 done
 
-IMAGE=`whiptail --nocancel --notags --fb --title "$TITLE" --menu "Choose the image" 8 78 0 "${IMAGES[@]}"  3>&1 1>&2 2>&3`
+IMAGE=`whiptail --notags --fb --title "$TITLE" --menu "Choose the image" 8 78 0 "${IMAGES[@]}"  3>&1 1>&2 2>&3`
 
-sudo -Nnv 2>/dev/null || PSW=`whiptail --nocancel --notags --fb --title "$TITLE" --passwordbox "Enter your password. Flashing requires privileges" 10 60 3>&1 1>&2 2>&3`
+sudo -Nnv 2>/dev/null || PSW=`whiptail --notags --fb --title "$TITLE" --passwordbox "Enter your password. Flashing requires privileges" 10 60 3>&1 1>&2 2>&3`
 if ! echo "$PSW" | sudo -Sv 2>/dev/null ;then
     echo "ERROR: Cannot authenticate"
     exit 1
