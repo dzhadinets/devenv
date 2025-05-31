@@ -14,13 +14,15 @@ call_help()
     echo "  c|clean                            	- clean workdir"
     echo "  r|run [<runqemu_params>]           	- run QEMU (console only)"
     echo "  dt|devtool <params>                	- call devtool with params"
-    echo "  g|graph <recepie> [<filter>]       	- build graph of BSP dependencies."
+    echo "  rt|recipetool [<params>]           	- call recipetool with params"
+    echo "  g|graph <recepie> [<filter>]       	- build graph of recipe dependencies."
     echo "  deploy [<deploy_params>]           	- deploy built image"
-    echo "  find [<find_pattern>]              	- find for recipes by pattern with ?*"
+    echo "  f|find [<find_pattern>]            	- find for recipes by pattern with ?*"
+    echo "  i|info [<recipe_name>]             	- prints information about recipe"
     echo "  <deploy_params>                    	- both parameters must be specified NOT_IMEPLENTED"
     echo "    <image>                          	- image to flash"
     echo "    <device>                         	- device"
-    echo "  <sync_params>                      	- sync parameters"
+    echo "  <sync_params>                      	- sync additional calls"
     echo "    init                             	- create project basing on $DEVENV_PROJECT_FILE"
     echo "    state                            	- get state of working directory"
     echo "    workspace                        	- additionally do build of workdir"
@@ -32,7 +34,7 @@ call_host()
 
     log_info "Prepare YOCTO dev environment."
     if [ ! -f "${DEVENV_ROOT}/$DEVENV_PROJECT_FILE" ]; then
-        echo "The dir (${DEVENV_ROOT}) does not contain $DEVENV_PROJECT_FILE"
+        log_err "The dir (${DEVENV_ROOT}) does not contain $DEVENV_PROJECT_FILE"
     else
         source ${DEVENV_ROOT}/$DEVENV_PROJECT_FILE
     fi
@@ -72,8 +74,8 @@ function do_workspace
 {
     cd $DEVENV_BUILDDIR
     if [ -z "${YOCTO_LAYERS[*]}" ]; then
-        log_err "Define YOCTO_LAYERS variable"
-        false
+        log_warn "YOCTO_LAYERS is not defined"
+        return
     fi
     bitbake-layers add-layer ${YOCTO_LAYERS[@]}
 }
@@ -212,9 +214,25 @@ call_docker()
             shift
             devtool "$@"
             ;;
+        rt|recipetool)
+            shift
+            recipetool "$@"
+            ;;
         f|find)
             shift
             bitbake-layers show-recipes -fb "*$@*"
+            ;;
+        i|info)
+            shift
+            eval info=( $(oe-pkgdata-util package-info -e LICENSE -e SUMMARY -e DESCRIPTION $1) )
+            if [ -n "${info[0]}" ]; then
+                echo -e "\tRECIPE: ${info[0]}"
+                echo -e "\tVERSION: ${info[1]}"
+                echo -e "\tLICENSE: ${info[5]}"
+                echo -e "\tSUMMARY: ${info[6]}"
+                echo -e "\tDESCRIPTION: ${info[7]}"
+            fi
+            exit
             ;;
         *)
             log_info "Execute bitbake with '$@' params"
