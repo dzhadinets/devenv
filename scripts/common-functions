@@ -8,18 +8,19 @@ set -e
 DEVENV_LOG_SILENT=${DEVENV_LOG_SILENT:-false}
 DEVENV_LOG_VERBOSE=${DEVENV_LOG_VERBOSE:-false}
 
-if [ "$(dirname $BASH_SOURCE)" = "/usr/bin" ]; then
-    LOG_PREFIX=" D |"
-else
-    LOG_PREFIX=" H |"
+if $DEVENV_LOG_VERBOSE; then
+    if [ "$(dirname $BASH_SOURCE)" = "/usr/bin" ]; then
+        LOG_PREFIX=" D |"
+    else
+        LOG_PREFIX=" H |"
+    fi
 fi
 
-perform_call()
+log_call()
 {
-    local MESSAGE=$1
-    eval $2
+    local MESSAGE=$(eval $*)
     ERROR=$?
-    [ $ERROR -eq 0 ] && log_info "$MESSAGE :done" || log_err "$MESSAGE : error($ERROR)"
+    [ $ERROR -eq 0 ] && log_info "$* :done" || log_err "$* : error($ERROR) \n$MESSAGE"
 }
 
 log_info()
@@ -29,6 +30,7 @@ log_info()
 log_err()
 {
     echo "$LOG_PREFIX [E] $@" >&2
+    false
 }
 log_dbg()
 {
@@ -62,7 +64,7 @@ function do_sync
         false
     fi
     cp -f $(realpath $DEVENV_MANIFEST) .repo/manifests/default.xml
-    repo sync --force-sync -j $CPUS "$@"
+    repo sync --no-repo-verify --force-sync -j $CPUS "$@"
 }
 
 #  TODO: add here some do_clean dist do-clean-build and some more functions and clean up scenarios.

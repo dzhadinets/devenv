@@ -51,7 +51,8 @@ done
 
 # Make dir for .pid file at /var/run/user/${USER_ID}
 mkdir --parents --mode=777 /var/run/user/${USER_ID}
-service ssh start
+log_call service ssh start
+log_info $(ifconfig eth0 | grep inet)
 set +e
 # Default to 'bash' if no arguments are provided
 args="$@"
