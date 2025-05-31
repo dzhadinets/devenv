@@ -68,7 +68,7 @@ RUN update-alternatives --config python
 RUN apt-get install -y kmod cpu-checker openssh-server
 
 # Install repo
-#RUN curl -o /usr/local/bin/repo https://storage.googleapis.com/git-repo-downloads/repo && chmod a+x /usr/local/bin/repo 
+RUN curl -o /usr/local/bin/repo https://storage.googleapis.com/git-repo-downloads/repo && chmod a+x /usr/local/bin/repo
 
 # Minimize container size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
