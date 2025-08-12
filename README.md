@@ -63,7 +63,7 @@ If you need more details about docker configuration check out [Post-installation
 │ └─yocto     # Yocto examples
 ├─ide       # IDE integration support files
 │ └─.vscode         # Visual Studio Code integration files
-└─scripts   # service scripts used by building system
+├─scripts   # service scripts used by building system
 └─yocto     # YOCTO stuff: graph dependency generator
 ```
 

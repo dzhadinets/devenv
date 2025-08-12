@@ -14,7 +14,7 @@ if [ -z ${GROUP_ID+x} ]; then GROUP_ID=1000; fi
 
 log_dbg "Creating user UID/GID [$USER_ID/$GROUP_ID]"
 groupadd -g $GROUP_ID -r $DOCKER_GROUP
-useradd -u $USER_ID --create-home -r -g $DOCKER_GROUP $DOCKER_USER
+useradd -u $USER_ID --create-home -g $DOCKER_GROUP $DOCKER_USER
 
 log_dbg "Granting user $DOCKER_USER all sudo privilegies"
 adduser $DOCKER_USER sudo >/dev/null

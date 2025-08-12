@@ -1,7 +1,7 @@
 #
 # Docker image to build YOCTO based project
 #
-FROM ubuntu:20.04
+FROM debian:12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -16,8 +16,28 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8
 ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
 
-# install essential packages
+# install yocto essential packages from website https://docs.yoctoproject.org/5.0.11/ref-manual/system-requirements.html#ubuntu-and-debian
+RUN apt install -y \
+    build-essential chrpath cpio debianutils diffstat file gawk gcc git \
+    iputils-ping libacl1 liblz4-tool locales \
+    python3 python3-git python3-jinja2 python3-pexpect python3-pip python3-subunit \
+    socat texinfo unzip wget xz-utils zstd
+
+# OpenEmbedded Self-Test
+RUN apt-get install -y python3-git
+
+# /bin/sh points to Dash by default, reconfigure to use bash until Android
+# build becomes POSIX compliant
+RUN echo "dash dash/sh boolean false" | debconf-set-selections && \
+    dpkg-reconfigure -p critical dash
+
+# runqemu requirements
+RUN apt-get install -y  net-tools iproute2 iptables policykit-1 kmod bridge-utils
+
+# install additional essential packages
 RUN apt-get install -y \
     sudo \
     curl \
@@ -25,50 +45,29 @@ RUN apt-get install -y \
     vim mg \
     screen \
     git-core \
-    unzip
+    yq \
+    kmod \
+    cpu-checker \
+    openssh-server \
+    gawk
 
-# install additional DEV tools (build-essential: gcc, g++, libc-dev, dpkg-dev, make)
-RUN apt-get install -y \
-    build-essential \
-    pkg-config
+#    gawk wget git diffstat unzip texinfo gcc \
+#    build-essential chrpath socat cpio python3 \
+#    python3-pip python3-pexpect xz-utils debianutils \
+#    iputils-ping python3-git python3-jinja2 \
+#    python3-subunit zstd liblz4-tool \
+#    file locales libacl1 \
+#    ca-certificates \
+#    software-properties-common \
+#    gawk wget git-core diffstat unzip texinfo gcc-multilib \
+#    build-essential chrpath socat cpio python python3 python3-pip python3-pexpect \
+#    xz-utils debianutils iputils-ping libsdl1.2-dev xterm \
+#    libxslt-dev libglib2.0-dev libc6-dev libpng-dev libncurses-dev libxml2-dev dos2unix \
+#    zstd liblz4-tool
 
-# install yocto essential packages
-RUN apt install -y \
-    gawk wget git diffstat unzip texinfo gcc \
-    build-essential chrpath socat cpio python3 \
-    python3-pip python3-pexpect xz-utils debianutils \
-    iputils-ping python3-git python3-jinja2 \
-    python3-subunit zstd liblz4-tool \
-    file locales libacl1 \
-    ca-certificates \
-    software-properties-common \
-    gawk wget git-core diffstat unzip texinfo gcc-multilib \
-    build-essential chrpath socat cpio python python3 python3-pip python3-pexpect \
-    xz-utils debianutils iputils-ping libsdl1.2-dev xterm \
-    libxslt-dev libglib2.0-dev libc6-dev libpng-dev libncurses-dev libxml2-dev dos2unix \
-    zstd liblz4-tool
 
-# OpenEmbedded Self-Test
-#RUN apt-get install -y python-git
-
-# /bin/sh points to Dash by default, reconfigure to use bash until Android
-# build becomes POSIX compliant
-RUN echo "dash dash/sh boolean false" | debconf-set-selections && \
-    dpkg-reconfigure -p critical dash
-
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
-
-# runqemu requirements
-RUN apt-get install -y  net-tools iproute2 iptables policykit-1 kmod bridge-utils
-
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1
-RUN update-alternatives --config python
-RUN apt-get install -y kmod cpu-checker openssh-server
-
-# Install repo
-RUN curl -o /usr/local/bin/repo https://storage.googleapis.com/git-repo-downloads/repo && chmod a+x /usr/local/bin/repo
+#RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1
+#RUN update-alternatives --config python
 
 # Minimize container size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

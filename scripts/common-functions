@@ -43,6 +43,9 @@ function do_init
         log_err "Define DEVENV_MANIFEST variable to real path"
         false
     fi
+    REPO_LOCATION=/usr/local/bin/repo
+    [ -x "${REPO_LOCATION}" ] || ( curl -o ${REPO_LOCATION} https://storage.googleapis.com/git-repo-downloads/repo && chmod a+x ${REPO_LOCATION} )
+
     repo init -u file://$(realpath $DEVENV_MANIFEST) --standalone-manifest
 }
 
@@ -65,6 +68,8 @@ function do_sync
     fi
     cp -f $(realpath $DEVENV_MANIFEST) .repo/manifests/default.xml
     repo sync --no-repo-verify --force-sync -j $CPUS "$@"
+#   clear all changes
+#   repo forall -c 'git reset --hard ; git clean -fdx'
 }
 
 #  TODO: add here some do_clean dist do-clean-build and some more functions and clean up scenarios.
