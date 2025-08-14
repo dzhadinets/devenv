@@ -27,7 +27,6 @@ usage()
     echo "  -c|--cpus NUMBER                   	- limit docker CPU core usage"
     echo "  -p|--path-substitute               	- replace inner docker path with host one"
     echo "The following are valid commands:"
-    echo "  docker [<docker_params>]           	- builds and install docker images"
     call_help
 }
 
@@ -95,12 +94,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [ "$1" = "docker" ]; then
-    shift
-    make -f $(cd $(dirname $0) && pwd -P)/../Makefile -C $PWD docker "$@"
-    exit 0
-fi
-
 if [ -n "$MAX_CPUS" ]; then
     DEVENV_ARGS+=" --cpus $MAX_CPUS"
     DEVENV_ENVS+=";CPUS=$MAX_CPUS"
@@ -116,6 +109,18 @@ DEVENV_ROOT=""
 DEVENV_PROJECT_FILE=project.setup
 ######## Perform host actions from caller script (devenv-aosp/devenv-yocto-/devenv-cmake)
 call_host "$@"
+
+if $(docker image inspect ${DEVENV_IMAGE} >/dev/null); then
+    log_dbg "Docker image found"
+else
+    DOCKERFILE=${DEVENV_IMAGE:7}
+    DOCKERFILE=${DOCKERFILE/\:/-}
+    if [ -f docker/${DOCKERFILE}.dockerfile ]; then
+         make -f $(cd $(dirname $0) && pwd -P)/../Makefile -C $PWD/docker ${DOCKERFILE} "$@"
+    else
+        log_err "Docker image ${DEVENV_IMAGE} not found (docker/${DOCKERFILE}.dockerfile)"
+    fi
+fi
 
 # Check that the caller script setup root of the sources
 if [ -z "$DEVENV_ROOT" -o -z "$DEVENV_DOCKER_ROOT" ]; then
