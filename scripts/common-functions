@@ -37,20 +37,32 @@ log_dbg()
     ! $DEVENV_LOG_VERBOSE || $DEVENV_LOG_SILENT || echo "$LOG_PREFIX [D] $@"
 }
 
+function check_repo
+{
+    REPO_LOCATION=/usr/local/bin/repo
+    if [ ! -x ".repo/repo/repo" ]; then
+        sudo mkdir -p $(dirname ${REPO_LOCATION})
+        sudo curl -o ${REPO_LOCATION} https://storage.googleapis.com/git-repo-downloads/repo
+        sudo chmod a+x ${REPO_LOCATION}
+    else
+        export PATH=$PATH:.repo/repo/
+    fi
+}
+
 function do_init
 {
+    check_repo
     if [ ! -r "$DEVENV_MANIFEST" ]; then
         log_err "Define DEVENV_MANIFEST variable to real path"
         false
     fi
-    REPO_LOCATION=/usr/local/bin/repo
-    [ -x "${REPO_LOCATION}" ] || ( curl -o ${REPO_LOCATION} https://storage.googleapis.com/git-repo-downloads/repo && chmod a+x ${REPO_LOCATION} )
 
     repo init -u file://$(realpath $DEVENV_MANIFEST) --standalone-manifest
 }
 
 function do_state
 {
+    check_repo
     if [ -d ".repo" ];then
         REPO_OUT="$(repo status 2>/dev/null)"
         REPO_RES=$?
@@ -62,6 +74,7 @@ function do_state
 
 function do_sync
 {
+    check_repo
     if [ ! -r "$DEVENV_MANIFEST" ]; then
         log_err "Define DEVENV_MANIFEST variable to real path"
         false
@@ -75,6 +88,7 @@ function do_sync
 #  TODO: add here some do_clean dist do-clean-build and some more functions and clean up scenarios.
 function do_clean
 {
+    check_repo
     if [ -z "$DEVENV_BUILDDIR" ]; then
         log_err "Define DEVENV_BUILDDIR variable to real path"
         false
