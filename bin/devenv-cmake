@@ -21,7 +21,6 @@ call_help()
     echo "  sonar_test [<test_params>]         	- launches tests and coverage for sonar"
     echo "  sonar_scan [<sonar_params>]        	- launches sonar scanner"
     echo "  package [<cmake_params>]           	- prepares distribution package"
-    echo "  docker [<docker_params>]           	- builds and install docker images"
     echo "  shell|-- [<CMD>]                   	- launches shell inside the docker with optional command CMD"
     echo "  <cmake_params>                     	- is additional parameters to cmake call"
     echo "    -D                               	- Define a variable"
@@ -58,12 +57,6 @@ call_host()
         log_err "The dir (${DEVENV_ROOT}) does not contain ${DEVENV_PROJECT_FILE}"
     else
         source ${DEVENV_ROOT}/${DEVENV_PROJECT_FILE}
-    fi
-
-    if [ "$1" = "docker" ]; then
-        shift
-        make -f $(cd $(dirname $0) && pwd -P)/../Makefile -C ${CMAKE_VOL} docker "$@"
-        exit 0
     fi
 
     if [ -z "$CMAKE_IMAGE" ]; then

@@ -27,6 +27,7 @@ usage()
     echo "  -c|--cpus NUMBER                   	- limit docker CPU core usage"
     echo "  -p|--path-substitute               	- replace inner docker path with host one"
     echo "The following are valid commands:"
+    echo "  docker [<docker_params>]           	- builds and install docker images"
     call_help
 }
 
@@ -94,6 +95,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [ "$1" = "docker" ]; then
+    shift
+    make -f $(cd $(dirname $0) && pwd -P)/../Makefile -C $PWD docker "$@"
+    exit 0
+fi
+
 if [ -n "$MAX_CPUS" ]; then
     DEVENV_ARGS+=" --cpus $MAX_CPUS"
     DEVENV_ENVS+=";CPUS=$MAX_CPUS"
@@ -143,7 +150,7 @@ if [ -S "$SSH_AUTH_SOCK" ]; then
     DEVENV_VOLUMES+=";$SSH_AUTH_SOCK:/tmp/ssh_auth"
     DEVENV_ENVS+=";SSH_AUTH_SOCK=/tmp/ssh_auth"
 else
-    log_err "WARNING: SSH_AUTH_SOCK not set please run 'eval `ssh-agent`' and add key to it"
+    log_err "WARNING: SSH_AUTH_SOCK not set please run 'eval \$(ssh-agent -s)' and add key to it"
 fi
 
 DEVENV_ARGS+=" --rm -h $DEVENV_IMAGE -v $(cd $(dirname $0) && pwd -P)/$(basename $0):/usr/local/bin/devenv_launcher.sh:ro"

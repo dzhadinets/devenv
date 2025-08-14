@@ -49,7 +49,8 @@ RUN apt-get install -y \
     kmod \
     cpu-checker \
     openssh-server \
-    gawk
+    gawk \
+    lzop
 
 #    gawk wget git diffstat unzip texinfo gcc \
 #    build-essential chrpath socat cpio python3 \
